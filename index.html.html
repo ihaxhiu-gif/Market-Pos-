@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+<meta charset="UTF-8">
+<title>POS Market – FINAL ABSOLUT</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+<style>
+body{margin:0;font-family:Segoe UI;background:#eef2f7}
+header{background:#1e293b;color:#fff;padding:15px}
+nav button{margin:4px;padding:10px;border:none;border-radius:10px;background:#334155;color:#fff}
+section{display:none;padding:15px}
+section.active{display:block}
+.card{background:#fff;padding:15px;border-radius:14px;margin-bottom:12px;box-shadow:0 8px 18px rgba(0,0,0,.1)}
+input,button{padding:8px;border-radius:8px;border:1px solid #cbd5f5}
+button{background:#2563eb;color:#fff;font-weight:600;margin:3px}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{padding:6px;border-bottom:1px solid #e5e7eb;text-align:center}
+th{background:#f1f5f9}
+.admin{display:none}
+.qtyBtn{padding:4px 8px}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999}
+.modal-content{background:#fff;margin:80px auto;padding:15px;width:95%;max-width:420px;border-radius:14px}
+</style>
+
+<script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.js"></script>
+</head>
+<body>
+
+<header>
+<h2>🛒 POS Market</h2>
+<nav id="menu" style="display:none">
+<button onclick="openSec('prod')" class="admin">Stok</button>
+<button onclick="openSec('sale')">Shitje</button>
+<button onclick="openSec('bil')" class="admin">Bilanc</button>
+<button onclick="logout()">Dil</button>
+</nav>
+</header>
+
+<!-- LOGIN -->
+<section id="loginSec" class="active">
+<div class="card">
+<h3>Login</h3>
+<input id="u" placeholder="User">
+<input id="p" type="password">
+<button onclick="doLogin()">Hyr</button>
+<p id="msg" style="color:red"></p>
+</div>
+</section>
+
+<!-- STOK -->
+<section id="prod">
+<div class="card admin">
+<h3>Shto Produkt</h3>
+<input id="pn" placeholder="Emri">
+<input id="pb" placeholder="Barkodi">
+<input id="pp" type="number" placeholder="Çmimi">
+<input id="ps" type="number" placeholder="Sasia">
+<button onclick="addProduct()">➕ Shto</button>
+<button onclick="openCam('stock','environment')">📷 Mbrapa</button>
+<button onclick="openCam('stock','user')">🤳 Para</button>
+</div>
+<table id="prodTable"></table>
+</section>
+
+<!-- SHITJE -->
+<section id="sale">
+<div class="card">
+<input id="saleScan" placeholder="Emër / Barkod / Scan USB" autofocus>
+<button onclick="manualAdd()">➕ Shto</button>
+<button onclick="openCam('sale','environment')">📷 Mbrapa</button>
+<button onclick="openCam('sale','user')">🤳 Para</button>
+</div>
+
+<div class="card">
+<table id="saleTable"></table>
+<h3>Total: <span id="tot">0</span> ALL</h3>
+<input id="paid" type="number" placeholder="Lekë nga klienti">
+<h3>Kusur / Mungesë: <span id="change">0</span></h3>
+<button onclick="pay()">Paguaj</button>
+<button onclick="cancel()">Anulo</button>
+</div>
+</section>
+
+<!-- BILANC -->
+<section id="bil" class="admin">
+<div class="card">
+<h3>Bilanci Ditor</h3>
+<p>Sistemi: <b><span id="daily">0</span> ALL</b></p>
+<input id="cashReal" type="number" placeholder="Shuma reale në arkë">
+<p>Diferenca: <b><span id="diff">0</span></b></p>
+<button onclick="closeDay()">Mbyll Ditën</button>
+</div>
+</section>
+
+<!-- CAMERA -->
+<div class="modal" id="cam">
+<div class="modal-content">
+<h3>Scan Barcode</h3>
+<div id="scanner" style="height:260px"></div>
+<button onclick="stopCam()">Mbyll</button>
+</div>
+</div>
+
+<script>
+/* USERS */
+const users=[{u:'admin',p:'admin',r:'admin'},{u:'kasier',p:'kasier',r:'kasier'}];
+let role=null, scanTarget=null, scanLock=false, camMode='environment';
+
+let products=JSON.parse(localStorage.getItem('p')||'[]');
+let sales=[];
+let daily=+localStorage.getItem('daily')||0;
+
+/* LOGIN */
+function doLogin(){
+let f=users.find(x=>x.u===u.value&&x.p===p.value);
+if(!f)return msg.textContent='Gabim login';
+role=f.r;
+loginSec.style.display='none';
+menu.style.display='block';
+document.querySelectorAll('.admin').forEach(e=>e.style.display=role==='admin'?'block':'none');
+openSec('sale'); renderProducts(); updateDaily();
+}
+function logout(){location.reload();}
+function openSec(id){
+document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+document.getElementById(id).classList.add('active');
+}
+
+/* STOK */
+function addProduct(){
+products.push({n:pn.value,b:pb.value,p:+pp.value,s:+ps.value});
+store();
+pn.value=pb.value=pp.value=ps.value='';
+}
+function renderProducts(){
+prodTable.innerHTML='<tr><th>Emër</th><th>Barkod</th><th>Çmim</th><th>Stok</th><th>❌</th></tr>';
+products.forEach((p,i)=>{
+prodTable.innerHTML+=`
+<tr>
+<td><input value="${p.n}" onchange="products[${i}].n=this.value;store()"></td>
+<td><input value="${p.b}" onchange="products[${i}].b=this.value;store()"></td>
+<td><input type="number" value="${p.p}" onchange="products[${i}].p=+this.value;store()"></td>
+<td><input type="number" value="${p.s}" onchange="products[${i}].s=+this.value;store()"></td>
+<td><button onclick="products.splice(${i},1);store()">🗑️</button></td>
+</tr>`;
+});
+}
+
+/* SHITJE */
+function addToSale(p){
+if(p.s<1)return alert('Stoku = 0');
+let s=sales.find(x=>x.b===p.b);
+if(s){ if(s.q+1>p.s)return; s.q++; }
+else sales.push({b:p.b,n:p.n,p:p.p,q:1});
+drawSale();
+}
+function manualAdd(){
+let v=saleScan.value.trim().toLowerCase();
+let p=products.find(x=>x.b===v||x.n.toLowerCase().includes(v));
+if(!p)return alert('Nuk u gjet');
+addToSale(p); saleScan.value='';
+}
+saleScan.addEventListener('keydown',e=>{if(e.key==='Enter')manualAdd();});
+
+/* SHITJE + LLOGARITJE */
+function drawSale(){
+saleTable.innerHTML='<tr><th>Produkt</th><th>Sasi</th><th>Total</th><th></th></tr>';
+sales.forEach((x,i)=>{
+saleTable.innerHTML+=`
+<tr>
+<td>${x.n}</td>
+<td>
+<button class="qtyBtn" onclick="x.q--; if(x.q<1)sales.splice(${i},1); drawSale()">➖</button>
+${x.q}
+<button class="qtyBtn" onclick="if(x.q<products.find(p=>p.b===x.b).s)x.q++; drawSale()">➕</button>
+</td>
+<td>${x.q*x.p}</td>
+<td><button onclick="sales.splice(${i},1);drawSale()">🗑️</button></td>
+</tr>`;
+});
+recalc();
+}
+function recalc(){
+let total=0; sales.forEach(x=>total+=x.q*x.p);
+tot.textContent=total;
+let diff=(+paid.value||0)-total;
+change.textContent=diff<0?`Mungojnë ${Math.abs(diff)} ALL`:diff+' ALL';
+change.style.color=diff<0?'red':'green';
+}
+paid.addEventListener('input',recalc);
+
+/* 📷 CAMERA PARA / MBRAPA */
+function openCam(target,mode){
+scanTarget=target;
+camMode=mode;
+scanLock=false;
+cam.style.display='block';
+
+Quagga.init({
+inputStream:{
+type:"LiveStream",
+target:document.querySelector('#scanner'),
+constraints:{
+facingMode:{ ideal: camMode },
+width:{ ideal:640 },
+height:{ ideal:480 }
+}
+},
+locator:{patchSize:"medium",halfSample:true},
+decoder:{readers:["ean_reader","ean_8_reader","code_128_reader","upc_reader"]},
+locate:true
+},err=>{
+if(err){alert("Kamera nuk u hap (HTTPS / leje)");return;}
+Quagga.start();
+});
+
+Quagga.onDetected(d=>{
+if(scanLock)return;
+scanLock=true;
+let code=d.codeResult.code;
+if(scanTarget==='stock')pb.value=code;
+if(scanTarget==='sale'){
+let p=products.find(x=>x.b===code);
+if(p)addToSale(p);
+}
+setTimeout(stopCam,400);
+});
+}
+
+function stopCam(){Quagga.stop();cam.style.display='none';}
+
+/* PAGESA & BILANC */
+function pay(){
+let total=+tot.textContent, cash=+paid.value||0;
+if(cash<total)return alert('Shumë e pamjaftueshme');
+sales.forEach(x=>products.find(p=>p.b===x.b).s-=x.q);
+daily+=total; localStorage.setItem('daily',daily);
+store(); cancel(); updateDaily();
+}
+function cancel(){
+sales=[]; saleTable.innerHTML='';
+tot.textContent=0; paid.value=''; change.textContent=0;
+}
+function updateDaily(){dailyEl.textContent=daily;}
+cashReal.addEventListener('input',()=>{
+let d=(+cashReal.value||0)-daily;
+diff.textContent=d+' ALL'; diff.style.color=d<0?'red':'green';
+});
+function closeDay(){
+alert(`Sistemi: ${daily} ALL\nArka: ${cashReal.value} ALL\nDiferenca: ${cashReal.value-daily} ALL`);
+daily=0; localStorage.setItem('daily',0);
+cashReal.value=''; updateDaily(); diff.textContent=0;
+}
+
+/* UTIL */
+function store(){localStorage.setItem('p',JSON.stringify(products)); renderProducts();}
+const dailyEl=document.getElementById('daily');
+</script>
+
+</body>
+</html>
