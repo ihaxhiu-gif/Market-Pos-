@@ -2,37 +2,40 @@
 <html lang="sq">
 <head>
 <meta charset="UTF-8">
-<title>Market POS – FINAL WORKING</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market POS PRO</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- Firebase COMPAT -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-<!-- Quagga Barcode -->
+<!-- Quagga Camera Scanner -->
 <script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.js"></script>
 
 <style>
-*{box-sizing:border-box}
 body{margin:0;font-family:system-ui;background:#f1f5f9}
 header{background:#020617;color:#fff;padding:14px}
-nav button{margin:4px;padding:12px 16px;border-radius:12px;border:none;background:#1e293b;color:#fff}
+nav button{margin:4px;padding:10px 14px;border-radius:10px;border:none;background:#1e293b;color:#fff}
 section{display:none;padding:14px}
 section.active{display:block}
-.card{background:#fff;padding:14px;border-radius:16px;margin-bottom:14px;box-shadow:0 6px 16px rgba(0,0,0,.08)}
-input{width:100%;margin-bottom:10px;padding:12px;border-radius:10px;border:1px solid #cbd5e1;font-size:16px}
-button{padding:12px 16px;border-radius:12px;border:none;font-size:16px;font-weight:600}
+.card{background:#fff;padding:14px;border-radius:16px;margin-bottom:14px;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+input,button{padding:10px;border-radius:10px;border:1px solid #cbd5e1;font-size:16px}
+button{border:none;font-weight:600}
 .primary{background:#2563eb;color:#fff}
 .success{background:#16a34a;color:#fff}
 .danger{background:#dc2626;color:#fff}
 table{width:100%;border-collapse:collapse}
-th,td{padding:10px;border-bottom:1px solid #e5e7eb}
+th,td{padding:8px;border-bottom:1px solid #e5e7eb;text-align:center}
 th{background:#f8fafc}
-.adminOnly{display:none}
 
-/* Camera Modal */
-#camModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999}
-#camBox{background:#fff;margin:40px auto;padding:14px;width:95%;max-width:420px;border-radius:18px}
+#camModal{
+ display:none;position:fixed;inset:0;
+ background:rgba(0,0,0,.6);z-index:999
+}
+#camBox{
+ background:#fff;margin:40px auto;padding:14px;
+ width:95%;max-width:420px;border-radius:18px
+}
 #scanner{height:280px;border-radius:14px;overflow:hidden}
 </style>
 </head>
@@ -40,68 +43,64 @@ th{background:#f8fafc}
 <body>
 
 <header>
-<h2>🧾 Market POS</h2>
-<nav id="menu" style="display:none">
-<button onclick="openSec('stock')" class="adminOnly">📦 Stok</button>
+<h2>🧾 Market POS PRO</h2>
+<nav>
+<button onclick="openSec('stock')">📦 Stok</button>
 <button onclick="openSec('sale')">🛒 Shitje</button>
-<button onclick="openSec('bil')" class="adminOnly">📊 Bilanc</button>
-<button onclick="logout()">🚪 Dil</button>
 </nav>
 </header>
 
-<section id="loginSec" class="active">
+<!-- STOCK -->
+<section id="stock" class="active">
 <div class="card">
-<h3>Login</h3>
-<input id="u" placeholder="User">
-<input id="p" type="password" placeholder="Password">
-<button class="primary" onclick="doLogin()">Hyr</button>
-</div>
-</section>
-
-<section id="stock">
-<div class="card adminOnly">
-<h3>Shto Produkt</h3>
-<input id="pn" placeholder="Emri">
-<input id="pb" placeholder="Barkodi">
-<input id="pp" type="number" placeholder="Çmimi">
-<input id="ps" type="number" placeholder="Sasia">
+<h3>Shto / Edito Produkt</h3>
+<input id="sn" placeholder="Emri">
+<input id="sb" placeholder="Barkod">
+<input id="sp" type="number" placeholder="Çmimi">
+<input id="ss" type="number" placeholder="Sasia">
+<div>
 <button class="primary" onclick="openCam('stock','environment')">📷 Kamera Mbrapa</button>
 <button class="primary" onclick="openCam('stock','user')">🤳 Kamera Para</button>
-<button class="success" onclick="addProduct()">➕ Shto Produkt</button>
+<button class="success" onclick="saveProduct()">💾 Ruaj</button>
 </div>
+</div>
+
 <div class="card">
-<table id="stockTbl"></table>
+<h3>Stoku (LIVE)</h3>
+<table>
+<thead>
+<tr><th>Emër</th><th>Barkod</th><th>Çmim</th><th>Sasi</th></tr>
+</thead>
+<tbody id="stockTbl"></tbody>
+</table>
 </div>
 </section>
 
+<!-- SALE -->
 <section id="sale">
 <div class="card">
-<input id="scan" placeholder="Barkod / Emër / USB">
-<button class="primary" onclick="manualAdd()">➕ Shto</button>
-<button class="primary" onclick="openCam('sale','environment')">📷</button>
-<button class="primary" onclick="openCam('sale','user')">🤳</button>
+<input id="saleScan" placeholder="Scan barkod / emër / USB">
+<div>
+<button class="primary" onclick="manualAdd()">➕ Manual</button>
+<button class="primary" onclick="openCam('sale','environment')">📷 Kamera</button>
+</div>
 </div>
 
 <div class="card">
-<table id="saleTbl"></table>
+<table>
+<thead>
+<tr><th>Produkt</th><th>Sasi</th><th>Total</th></tr>
+</thead>
+<tbody id="saleTbl"></tbody>
+</table>
 <h3>Total: <span id="total">0</span> ALL</h3>
-<input id="paid" type="number" placeholder="Klienti jep">
-<h3 id="change">0</h3>
+<input id="paid" type="number" placeholder="Klienti paguan">
+<h3 id="change">Kusur: 0</h3>
 <button class="success" onclick="pay()">PAGUAJ</button>
-<button class="danger" onclick="clearSale()">ANULO</button>
 </div>
 </section>
 
-<section id="bil" class="adminOnly">
-<div class="card">
-<h3>Bilanci Ditor</h3>
-<p>Sistem: <b><span id="daily">0</span></b></p>
-<input id="realCash" type="number" placeholder="Para reale">
-<p>Diferenca: <b><span id="diff">0</span></b></p>
-<button class="primary" onclick="closeDay()">Mbyll Ditën</button>
-</div>
-</section>
-
+<!-- CAMERA MODAL -->
 <div id="camModal">
 <div id="camBox">
 <h3>Scan Barcode</h3>
@@ -118,65 +117,65 @@ firebase.initializeApp({
 });
 const db=firebase.database();
 
-/* USERS */
-const users=[
- {u:"admin",p:"admin",r:"admin"},
- {u:"kasier",p:"kasier",r:"kasier"}
-];
-let role=null;
+/* STATE */
+let products={},cart=[],editing=null;
+let scanTarget=null,scanLock=false;
 
-/* DATA */
-let products={},cart=[],scanTarget=null,scanLock=false;
-const today=new Date().toISOString().slice(0,10);
-
-/* LIVE SYNC */
-db.ref("products").on("value",snap=>{
- products=snap.val()||{};
- drawStock();
-});
-db.ref("daily/"+today).on("value",s=>daily.textContent=s.val()||0);
-
-/* LOGIN */
-function doLogin(){
- let f=users.find(x=>x.u===u.value&&x.p===p.value);
- if(!f)return alert("Gabim login");
- role=f.r;
- loginSec.style.display="none";
- menu.style.display="block";
- document.querySelectorAll(".adminOnly")
-  .forEach(e=>e.style.display=role==="admin"?"block":"none");
- openSec("sale");
-}
-function logout(){location.reload();}
+/* NAV */
 function openSec(id){
  document.querySelectorAll("section").forEach(s=>s.classList.remove("active"));
  document.getElementById(id).classList.add("active");
 }
 
-/* 📦 STOK */
-function addProduct(){
- if(!pn.value||!pb.value||!pp.value||!ps.value)
-   return alert("Plotëso të gjitha fushat");
- db.ref("products").push({
-  n:pn.value.trim(),
-  b:pb.value.trim(),
-  p:+pp.value,
-  s:+ps.value
- });
- pn.value=pb.value=pp.value=ps.value="";
+/* 🔄 LIVE SYNC PRODUCTS */
+db.ref("products").on("child_added",snap=>{
+ products[snap.key]=snap.val();
+ renderStock();
+});
+db.ref("products").on("child_changed",snap=>{
+ products[snap.key]=snap.val();
+ renderStock(); renderSale();
+});
+
+/* 📦 STOCK */
+function saveProduct(){
+ if(!sn.value||!sb.value||!sp.value||!ss.value)
+  return alert("Plotëso të gjitha");
+
+ if(editing){
+  db.ref("products/"+editing).set({
+   n:sn.value,b:sb.value,p:+sp.value,s:+ss.value
+  });
+  editing=null;
+ }else{
+  db.ref("products").push({
+   n:sn.value,b:sb.value,p:+sp.value,s:+ss.value
+  });
+ }
+ sn.value=sb.value=sp.value=ss.value="";
 }
-function drawStock(){
- stockTbl.innerHTML="<tr><th>Emër</th><th>Barkod</th><th>Çmim</th><th>Sasi</th></tr>";
- Object.values(products).forEach(p=>{
-  stockTbl.innerHTML+=`<tr>
-   <td>${p.n}</td><td>${p.b}</td><td>${p.p}</td><td>${p.s}</td>
+
+function renderStock(){
+ stockTbl.innerHTML="";
+ Object.entries(products).forEach(([id,p])=>{
+  stockTbl.innerHTML+=`
+  <tr onclick="editProd('${id}')">
+   <td>${p.n}</td>
+   <td>${p.b}</td>
+   <td>${p.p}</td>
+   <td>${p.s}</td>
   </tr>`;
  });
 }
+function editProd(id){
+ let p=products[id];
+ editing=id;
+ sn.value=p.n; sb.value=p.b; sp.value=p.p; ss.value=p.s;
+}
 
-/* 🛒 SHITJE */
-function manualAdd(){
- let v=scan.value.trim().toLowerCase();
+/* 🛒 SALE */
+function manualAdd(code){
+ let v=(code||saleScan.value).toLowerCase();
  let id=Object.keys(products).find(i=>
   products[i].b===v || products[i].n.toLowerCase()===v
  );
@@ -184,41 +183,35 @@ function manualAdd(){
  if(products[id].s<1)return alert("Stok 0");
  let c=cart.find(x=>x.id===id);
  c?c.q++:cart.push({id,q:1});
- drawSale(); scan.value="";
+ renderSale(); saleScan.value="";
 }
-scan.onkeydown=e=>e.key==="Enter"&&manualAdd();
+saleScan.onkeydown=e=>e.key==="Enter"&&manualAdd();
 
-function drawSale(){
- saleTbl.innerHTML="<tr><th>Produkt</th><th>Sasi</th><th>Total</th></tr>";
+function renderSale(){
+ saleTbl.innerHTML="";
  let t=0;
  cart.forEach(x=>{
   let p=products[x.id];
   t+=x.q*p.p;
-  saleTbl.innerHTML+=`<tr>
-   <td>${p.n}</td><td>${x.q}</td><td>${x.q*p.p}</td>
-  </tr>`;
+  saleTbl.innerHTML+=`
+   <tr><td>${p.n}</td><td>${x.q}</td><td>${x.q*p.p}</td></tr>`;
  });
  total.textContent=t;
  calc();
 }
 function calc(){
  let d=(+paid.value||0)-total.textContent;
- change.textContent=d<0?`Mungojnë ${Math.abs(d)}`:`Kusur ${d}`;
+ change.textContent=d>=0?`Kusur: ${d}`:`Mungojnë: ${-d}`;
 }
 paid.oninput=calc;
 
 function pay(){
  if(+paid.value<+total.textContent)
-   return alert("Nuk mjafton shuma");
+  return alert("Nuk mjafton shuma");
  cart.forEach(x=>{
   db.ref("products/"+x.id+"/s").transaction(v=>v-x.q);
  });
- db.ref("daily/"+today).transaction(v=>(v||0)+ +total.textContent);
- clearSale();
-}
-function clearSale(){
- cart=[];saleTbl.innerHTML="";
- total.textContent=0;paid.value="";change.textContent=0;
+ cart=[];renderSale();paid.value="";change.textContent="";
 }
 
 /* 📷 CAMERA */
@@ -226,33 +219,24 @@ function openCam(target,mode){
  scanTarget=target;scanLock=false;
  camModal.style.display="block";
  Quagga.init({
-  inputStream:{type:"LiveStream",target:scanner,constraints:{facingMode:mode}},
+  inputStream:{type:"LiveStream",target:scanner,
+   constraints:{facingMode:mode}},
   decoder:{readers:["ean_reader","code_128_reader"]}
  },err=>{
-  if(err)return alert("HTTPS & lejo kamerën");
+  if(err)return alert("HTTPS + leje kamerë");
   Quagga.start();
  });
  Quagga.onDetected(d=>{
   if(scanLock)return;
   scanLock=true;
   let code=d.codeResult.code;
-  if(scanTarget==="stock")pb.value=code;
-  if(scanTarget==="sale"){
-   let id=Object.keys(products).find(i=>products[i].b===code);
-   if(id){cart.push({id,q:1});drawSale();}
-  }
+  if(scanTarget==="stock")sb.value=code;
+  if(scanTarget==="sale")manualAdd(code);
   setTimeout(stopCam,400);
  });
 }
-function stopCam(){Quagga.stop();camModal.style.display="none";}
-
-/* 📊 BILANC */
-function closeDay(){
- let real=+realCash.value||0;
- let sys=+daily.textContent;
- diff.textContent=real-sys;
- db.ref("backup/"+Date.now()).set({products,sys,real});
- alert("Bilanci u mbyll");
+function stopCam(){
+ Quagga.stop();camModal.style.display="none";
 }
 </script>
 
