@@ -2,7 +2,7 @@
 <html lang="sq">
 <head>
 <meta charset="UTF-8">
-<title>POS Market – FINAL FIX</title>
+<title>POS Market – FINAL STABLE</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <!-- FIREBASE -->
@@ -24,7 +24,6 @@ button{background:#2563eb;color:#fff;font-weight:600}
 table{width:100%;border-collapse:collapse}
 th,td{padding:6px;border-bottom:1px solid #e5e7eb;text-align:center}
 .adminOnly{display:none}
-.small{padding:4px 8px}
 .red{background:#dc2626}
 .green{background:#16a34a}
 
@@ -52,7 +51,7 @@ th,td{padding:6px;border-bottom:1px solid #e5e7eb;text-align:center}
 <div class="card">
 <h3>Login</h3>
 <input id="u" placeholder="User">
-<input id="p" type="password">
+<input id="p" type="password" placeholder="Password">
 <button onclick="doLogin()">Hyr</button>
 </div>
 </section>
@@ -65,9 +64,9 @@ th,td{padding:6px;border-bottom:1px solid #e5e7eb;text-align:center}
 <input id="pb" placeholder="Barkodi">
 <input id="pp" type="number" placeholder="Çmimi">
 <input id="ps" type="number" placeholder="Sasia">
-<button onclick="openCam('stock','environment')">📷 Mbrapa</button>
-<button onclick="openCam('stock','user')">🤳 Para</button>
-<button onclick="addProduct()">➕ Shto</button>
+<button onclick="openCam('stock','environment')">📷 Kamera Mbrapa</button>
+<button onclick="openCam('stock','user')">🤳 Kamera Para</button>
+<button onclick="addProduct()">➕ Shto Produkt</button>
 </div>
 <table id="stockTbl"></table>
 </section>
@@ -94,7 +93,7 @@ th,td{padding:6px;border-bottom:1px solid #e5e7eb;text-align:center}
 <!-- BILANC -->
 <section id="bil" class="adminOnly">
 <div class="card">
-<h3>Bilanci</h3>
+<h3>Bilanci Ditor</h3>
 <p>Sistem: <b><span id="daily">0</span></b></p>
 <input id="realCash" type="number" placeholder="Para reale">
 <p>Diferenca: <b><span id="diff">0</span></b></p>
@@ -112,7 +111,7 @@ th,td{padding:6px;border-bottom:1px solid #e5e7eb;text-align:center}
 </div>
 
 <script>
-/* FIREBASE */
+/* 🔥 FIREBASE */
 firebase.initializeApp({
  apiKey:"AIzaSyD_CfsHudMqShAeXzOg7z91xYE7k-13hbk",
  authDomain:"market-pos-ab2e4.firebaseapp.com",
@@ -122,16 +121,24 @@ firebase.initializeApp({
 const db=firebase.database();
 
 /* USERS */
-const users=[{u:'admin',p:'admin',r:'admin'},{u:'kasier',p:'kasier',r:'kasier'}];
+const users=[
+ {u:'admin',p:'admin',r:'admin'},
+ {u:'kasier',p:'kasier',r:'kasier'}
+];
 let role=null;
 
 /* DATA */
 let products={},cart=[],scanTarget=null,scanLock=false;
 const today=new Date().toISOString().slice(0,10);
 
-/* LIVE */
-db.ref("products").on("value",s=>{products=s.val()||{};drawStock();});
-db.ref("daily/"+today).on("value",s=>daily.textContent=s.val()||0);
+/* LIVE SYNC */
+db.ref("products").on("value",s=>{
+ products=s.val()||{};
+ drawStock();
+});
+db.ref("daily/"+today).on("value",s=>{
+ daily.textContent=s.val()||0;
+});
 
 /* LOGIN */
 function doLogin(){
@@ -150,59 +157,89 @@ function openSec(id){
  document.getElementById(id).classList.add('active');
 }
 
-/* STOK */
+/* 📦 STOK */
 function addProduct(){
- db.ref("products").push({n:pn.value,b:pb.value,p:+pp.value,s:+ps.value});
- pn.value=pb.value=pp.value=ps.value='';
+ if(!pn.value||!pb.value||!pp.value||!ps.value){
+   alert("Plotëso të gjitha fushat");
+   return;
+ }
+ db.ref("products").push({
+   n:pn.value.trim(),
+   b:pb.value.trim(),
+   p:Number(pp.value),
+   s:Number(ps.value)
+ }).then(()=>{
+   pn.value=pb.value=pp.value=ps.value='';
+ });
 }
 function drawStock(){
  stockTbl.innerHTML='<tr><th>Emër</th><th>Barkod</th><th>Çmim</th><th>Sasi</th></tr>';
  Object.entries(products).forEach(([id,p])=>{
- stockTbl.innerHTML+=`<tr>
- <td>${p.n}</td><td>${p.b}</td><td>${p.p}</td><td>${p.s}</td>
- </tr>`;
+   stockTbl.innerHTML+=`
+   <tr>
+     <td>${p.n}</td>
+     <td>${p.b}</td>
+     <td>${p.p}</td>
+     <td>${p.s}</td>
+   </tr>`;
  });
 }
 
-/* SHITJE */
+/* 🛒 SHITJE */
 function manualAdd(){
- let v=scan.value.toLowerCase();
- let id=Object.keys(products).find(i=>products[i].b===v||products[i].n.toLowerCase().includes(v));
- if(!id||products[id].s<1)return alert("Stok 0");
+ if(!Object.keys(products).length)return alert("Stoku bosh");
+ let v=scan.value.trim().toLowerCase();
+ let id=Object.keys(products).find(i=>
+   products[i].b===v || products[i].n.toLowerCase()===v
+ );
+ if(!id)return alert("Produkti nuk ekziston");
+ if(products[id].s<1)return alert("Stok 0");
  let c=cart.find(x=>x.id===id);
  c?c.q++:cart.push({id,q:1});
  drawSale(); scan.value='';
 }
 scan.onkeydown=e=>e.key==='Enter'&&manualAdd();
 
-/* CAMERA */
+/* 📷 CAMERA */
 function openCam(target,mode){
  scanTarget=target; scanLock=false;
  camModal.style.display='block';
  Quagga.init({
   inputStream:{type:"LiveStream",target:scanner,constraints:{facingMode:mode}},
   decoder:{readers:["ean_reader","code_128_reader"]}
- },err=>{if(err)return alert("HTTPS / leje kamera");Quagga.start();});
+ },err=>{
+  if(err)return alert("HTTPS / lejo kamerën");
+  Quagga.start();
+ });
  Quagga.onDetected(d=>{
-  if(scanLock)return; scanLock=true;
+  if(scanLock)return;
+  scanLock=true;
   let code=d.codeResult.code;
   if(scanTarget==='stock')pb.value=code;
   if(scanTarget==='sale'){
    let id=Object.keys(products).find(i=>products[i].b===code);
-   if(id){cart.push({id,q:1});drawSale();}
+   if(!id)return alert("Produkti nuk ekziston");
+   if(products[id].s<1)return alert("Stok 0");
+   let c=cart.find(x=>x.id===id);
+   c?c.q++:cart.push({id,q:1});
+   drawSale();
   }
   setTimeout(stopCam,300);
  });
 }
 function stopCam(){Quagga.stop();camModal.style.display='none';}
 
-/* SHITJE TABLE */
+/* 🧮 SHITJE TABLE */
 function drawSale(){
  saleTbl.innerHTML='<tr><th>Produkt</th><th>Sasi</th><th>Total</th></tr>';
  let t=0;
- cart.forEach(x=>{let p=products[x.id];t+=x.q*p.p;
- saleTbl.innerHTML+=`<tr><td>${p.n}</td><td>${x.q}</td><td>${x.q*p.p}</td></tr>`});
- total.textContent=t;calc();
+ cart.forEach(x=>{
+  let p=products[x.id];
+  t+=x.q*p.p;
+  saleTbl.innerHTML+=`<tr><td>${p.n}</td><td>${x.q}</td><td>${x.q*p.p}</td></tr>`;
+ });
+ total.textContent=t;
+ calc();
 }
 function calc(){
  let d=(+paid.value||0)-total.textContent;
@@ -211,18 +248,24 @@ function calc(){
 paid.oninput=calc;
 
 function pay(){
- if(+paid.value<+total.textContent)return alert("Nuk mjafton");
- cart.forEach(x=>db.ref("products/"+x.id+"/s").transaction(v=>v-x.q));
- db.ref("sales/"+today).push({cart,total:+total.textContent});
+ if(+paid.value<+total.textContent)return alert("Nuk mjafton shuma");
+ cart.forEach(x=>{
+  db.ref("products/"+x.id+"/s").transaction(v=>v-x.q);
+ });
  db.ref("daily/"+today).transaction(v=>(v||0)+ +total.textContent);
  clearSale();
 }
-function clearSale(){cart=[];saleTbl.innerHTML='';total.textContent=0;paid.value='';change.textContent=0;}
+function clearSale(){
+ cart=[];saleTbl.innerHTML='';total.textContent=0;
+ paid.value='';change.textContent=0;
+}
 
+/* 📊 BILANC */
 function closeDay(){
- let real=+realCash.value||0,sys=+daily.textContent;
+ let real=+realCash.value||0;
+ let sys=+daily.textContent;
  diff.textContent=real-sys;
- db.ref("backup/"+Date.now()).set({products,daily:sys,realCash:real});
+ db.ref("backup/"+Date.now()).set({products,sys,real});
  alert("Bilanci u mbyll");
 }
 </script>
