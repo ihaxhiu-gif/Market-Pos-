@@ -2,52 +2,54 @@
 <html lang="sq">
 <head>
 <meta charset="UTF-8">
-<title>POS Market – ONLINE PRO</title>
+<title>POS Market – FINAL</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- FIREBASE -->
+<!-- FIREBASE (COMPAT – PUNON NË GITHUB PAGES) -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.js"></script>
 
 <style>
 body{margin:0;font-family:Segoe UI;background:#eef2f7}
-header{background:#1e293b;color:#fff;padding:15px}
-nav button{margin:4px;padding:10px;border:none;border-radius:10px;background:#334155;color:#fff}
+header{background:#020617;color:#fff;padding:15px}
+nav button{margin:4px;padding:10px;border-radius:10px;border:none;background:#1e293b;color:#fff}
 section{display:none;padding:15px}
 section.active{display:block}
-.card{background:#fff;padding:15px;border-radius:14px;margin-bottom:12px}
+.card{background:#fff;padding:15px;border-radius:14px;margin-bottom:12px;box-shadow:0 10px 20px rgba(0,0,0,.08)}
 input,button{padding:8px;border-radius:8px;border:1px solid #cbd5f5}
 button{background:#2563eb;color:#fff;font-weight:600}
 table{width:100%;border-collapse:collapse}
-th,td{padding:6px;border-bottom:1px solid #ddd;text-align:center}
+th,td{padding:6px;border-bottom:1px solid #e5e7eb;text-align:center}
 .admin{display:none}
-.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6)}
-.modal-content{background:#fff;margin:80px auto;padding:15px;width:95%;max-width:420px}
+.small{padding:4px 8px}
+.red{background:#dc2626}
+.green{background:#16a34a}
 </style>
 </head>
 
 <body>
 
 <header>
-<h2>🛒 POS Market (ONLINE)</h2>
+<h2>🧾 POS Market</h2>
 <nav id="menu" style="display:none">
-<button onclick="openSec('stock')" class="admin">Stok</button>
-<button onclick="openSec('sale')">Shitje</button>
-<button onclick="openSec('bil')" class="admin">Bilanc</button>
-<button onclick="logout()">Dil</button>
+<button onclick="openSec('stock')" class="admin">📦 Stok</button>
+<button onclick="openSec('sale')">🛒 Shitje</button>
+<button onclick="openSec('bil')" class="admin">📊 Bilanc</button>
+<button onclick="logout()">🚪 Dil</button>
 </nav>
 </header>
 
-<section id="login" class="active">
+<!-- LOGIN -->
+<section id="loginSec" class="active">
 <div class="card">
 <h3>Login</h3>
-<input id="u" placeholder="user">
-<input id="p" type="password">
-<button onclick="login()">Hyr</button>
+<input id="u" placeholder="User">
+<input id="p" type="password" placeholder="Password">
+<button onclick="doLogin()">Hyr</button>
 </div>
 </section>
 
+<!-- STOK -->
 <section id="stock">
 <div class="card admin">
 <h3>Shto Produkt</h3>
@@ -60,138 +62,172 @@ th,td{padding:6px;border-bottom:1px solid #ddd;text-align:center}
 <table id="stockTbl"></table>
 </section>
 
+<!-- SHITJE -->
 <section id="sale">
 <div class="card">
-<input id="scan" placeholder="Barkod / Emër">
-<button onclick="manualAdd()">Shto</button>
+<input id="scan" placeholder="Barkod ose emër">
+<button onclick="manualAdd()">➕</button>
 </div>
+
 <div class="card">
 <table id="saleTbl"></table>
 <h3>Total: <span id="total">0</span> ALL</h3>
 <input id="paid" type="number" placeholder="Klienti jep">
-<h3>Kusur / Mungesë: <span id="change">0</span></h3>
-<button onclick="pay()">Paguaj</button>
+<h3><span id="change">0</span></h3>
+<button class="green" onclick="pay()">PAGUAJ</button>
+<button class="red" onclick="clearSale()">ANULO</button>
 </div>
 </section>
 
+<!-- BILANC -->
 <section id="bil" class="admin">
 <div class="card">
 <h3>Bilanci Ditor</h3>
 <p>Sistem: <b><span id="daily">0</span> ALL</b></p>
-<input id="real" type="number" placeholder="Shuma reale">
+<input id="realCash" type="number" placeholder="Para reale në arkë">
 <p>Diferenca: <b><span id="diff">0</span></b></p>
-<button onclick="closeDay()">Mbyll Ditën</button>
+<button onclick="closeDay()">Mbyll Ditën + Backup</button>
 </div>
 </section>
 
 <script>
-/* 🔥 FIREBASE CONFIG – VENDOS TË TUAT */
+/* ================= FIREBASE – I LIDHUR ================= */
 firebase.initializeApp({
-  apiKey: "API_KEY",
-  authDomain: "PROJECT.firebaseapp.com",
-  databaseURL: "https://PROJECT.firebaseio.com",
-  projectId: "PROJECT"
+  apiKey: "AIzaSyD_CfsHudMqShAeXzOg7z91xYE7k-13hbk",
+  authDomain: "market-pos-ab2e4.firebaseapp.com",
+  databaseURL: "https://market-pos-ab2e4-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "market-pos-ab2e4",
+  storageBucket: "market-pos-ab2e4.appspot.com",
+  messagingSenderId: "189486236142",
+  appId: "1:189486236142:web:baaadd05e2590f05f14eff"
 });
 const db = firebase.database();
 
-/* USERS */
-const users=[{u:'admin',p:'admin',r:'admin'},{u:'kasier',p:'kasier',r:'kasier'}];
+/* ================= USERS ================= */
+const users=[
+ {u:'admin',p:'admin',r:'admin'},
+ {u:'kasier',p:'kasier',r:'kasier'}
+];
 let role=null;
 
-/* DATA */
+/* ================= DATA ================= */
 let products={}, cart=[];
 const today=new Date().toISOString().slice(0,10);
 
-/* LIVE SYNC */
+/* ================= LIVE SYNC ================= */
 db.ref("products").on("value",s=>{
-  products=s.val()||{};
-  drawStock();
+ products=s.val()||{};
+ drawStock();
 });
 db.ref("daily/"+today).on("value",s=>{
-  daily.textContent=s.val()||0;
+ daily.textContent=s.val()||0;
 });
 
-/* LOGIN */
-function login(){
-let f=users.find(x=>x.u===u.value&&x.p===p.value);
-if(!f)return;
-role=f.r;
-login.style.display='none';
-menu.style.display='block';
-document.querySelectorAll('.admin').forEach(e=>e.style.display=role==='admin'?'block':'none');
-openSec('sale');
+/* ================= LOGIN ================= */
+function doLogin(){
+ let f=users.find(x=>x.u===u.value&&x.p===p.value);
+ if(!f) return alert("User ose password gabim");
+ role=f.r;
+ loginSec.style.display='none';
+ menu.style.display='block';
+ document.querySelectorAll('.admin')
+   .forEach(e=>e.style.display=role==='admin'?'block':'none');
+ openSec('sale');
 }
 function logout(){location.reload();}
 function openSec(id){
-document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
-document.getElementById(id).classList.add('active');
+ document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
 }
 
-/* STOK */
+/* ================= STOK ================= */
 function addProduct(){
-db.ref("products").push({
-  n:pn.value,b:pb.value,p:+pp.value,s:+ps.value
-});
-pn.value=pb.value=pp.value=ps.value='';
+ db.ref("products").push({
+   n:pn.value,b:pb.value,p:+pp.value,s:+ps.value
+ });
+ pn.value=pb.value=pp.value=ps.value='';
 }
 function drawStock(){
-stockTbl.innerHTML='<tr><th>Emër</th><th>Barkod</th><th>Çmim</th><th>Sasi</th></tr>';
-Object.entries(products).forEach(([id,p])=>{
-stockTbl.innerHTML+=`
-<tr>
-<td>${p.n}</td><td>${p.b}</td><td>${p.p}</td><td>${p.s}</td>
-</tr>`;
-});
+ stockTbl.innerHTML='<tr><th>Emër</th><th>Barkod</th><th>Çmim</th><th>Sasi</th><th>❌</th></tr>';
+ Object.entries(products).forEach(([id,p])=>{
+ stockTbl.innerHTML+=`
+ <tr>
+ <td><input value="${p.n}" onchange="db.ref('products/${id}').update({n:this.value})"></td>
+ <td><input value="${p.b}" onchange="db.ref('products/${id}').update({b:this.value})"></td>
+ <td><input type="number" value="${p.p}" onchange="db.ref('products/${id}').update({p:+this.value})"></td>
+ <td><input type="number" value="${p.s}" onchange="db.ref('products/${id}').update({s:+this.value})"></td>
+ <td><button class="red small" onclick="db.ref('products/${id}').remove()">X</button></td>
+ </tr>`;
+ });
 }
 
-/* SHITJE */
+/* ================= SHITJE ================= */
 function manualAdd(){
-let v=scan.value.toLowerCase();
-let id=Object.keys(products).find(i=>products[i].b===v||products[i].n.toLowerCase().includes(v));
-if(!id||products[id].s<1)return;
-let c=cart.find(x=>x.id===id);
-c?c.q++:cart.push({id,q:1});
-drawCart();
-scan.value='';
+ let v=scan.value.toLowerCase();
+ let id=Object.keys(products)
+   .find(i=>products[i].b===v||products[i].n.toLowerCase().includes(v));
+ if(!id||products[id].s<1) return alert("Stok 0");
+ let c=cart.find(x=>x.id===id);
+ c?c.q++:cart.push({id,q:1});
+ drawSale(); scan.value='';
 }
 scan.onkeydown=e=>e.key==='Enter'&&manualAdd();
 
-function drawCart(){
-saleTbl.innerHTML='<tr><th>Produkt</th><th>Sasi</th><th>Tot</th></tr>';
-let t=0;
-cart.forEach(x=>{
-let p=products[x.id];
-t+=x.q*p.p;
-saleTbl.innerHTML+=`<tr><td>${p.n}</td><td>${x.q}</td><td>${x.q*p.p}</td></tr>`;
-});
-total.textContent=t;
-calc();
+function drawSale(){
+ saleTbl.innerHTML='<tr><th>Produkt</th><th>Sasi</th><th>Total</th><th></th></tr>';
+ let t=0;
+ cart.forEach((x,i)=>{
+ let p=products[x.id];
+ t+=x.q*p.p;
+ saleTbl.innerHTML+=`
+ <tr>
+ <td>${p.n}</td>
+ <td>
+ <button class="small" onclick="x.q>1&&(--x.q,drawSale())">−</button>
+ ${x.q}
+ <button class="small" onclick="x.q++,drawSale()">+</button>
+ </td>
+ <td>${x.q*p.p}</td>
+ <td><button class="red small" onclick="cart.splice(${i},1);drawSale()">X</button></td>
+ </tr>`;
+ });
+ total.textContent=t;
+ calc();
 }
 function calc(){
-let d=(+paid.value||0)-total.textContent;
-change.textContent=d<0?`-${Math.abs(d)}`:d;
+ let d=(+paid.value||0)-total.textContent;
+ change.textContent=d<0?`Mungojnë ${Math.abs(d)}`:`Kusur ${d}`;
 }
 paid.oninput=calc;
 
 function pay(){
-if(+paid.value<+total.textContent)return;
-cart.forEach(x=>{
-db.ref("products/"+x.id+"/s").transaction(v=>v-x.q);
-});
-db.ref("sales/"+today).push({cart,total:+total.textContent,time:Date.now()});
-db.ref("daily/"+today).transaction(v=>(v||0)+ +total.textContent);
-cart=[]; drawCart(); paid.value='';
+ if(+paid.value<+total.textContent) return alert("Nuk mjafton shuma");
+ cart.forEach(x=>{
+   db.ref("products/"+x.id+"/s").transaction(v=>v-x.q);
+ });
+ db.ref("sales/"+today).push({cart,total:+total.textContent,time:Date.now()});
+ db.ref("daily/"+today).transaction(v=>(v||0)+ +total.textContent);
+ clearSale();
+}
+function clearSale(){
+ cart=[]; saleTbl.innerHTML=''; total.textContent=0; paid.value=''; change.textContent=0;
 }
 
-/* BACKUP */
+/* ================= BILANC ================= */
 function closeDay(){
-db.ref("backup/"+Date.now()).set({
-  products,
-  sales:cart,
-  daily:daily.textContent
-});
-alert("Backup u ruajt");
+ let real=+realCash.value||0;
+ let sys=+daily.textContent;
+ diff.textContent=real-sys;
+ db.ref("backup/"+Date.now()).set({
+   products,
+   daily:sys,
+   realCash:real
+ });
+ alert("Bilanci u mbyll & backup u ruajt");
 }
 </script>
+
 </body>
 </html>
+
+
