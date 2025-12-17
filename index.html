@@ -2,21 +2,21 @@
 <html lang="sq">
 <head>
 <meta charset="UTF-8">
-<title>POS Market – Stable UI</title>
+<title>Market POS – FINAL WORKING</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- FIREBASE -->
+<!-- Firebase COMPAT -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-<!-- QUAGGA -->
+<!-- Quagga Barcode -->
 <script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.js"></script>
 
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui;background:#f1f5f9}
 header{background:#020617;color:#fff;padding:14px}
-nav button{margin:4px;padding:12px 16px;border-radius:12px;border:none;background:#1e293b;color:#fff;font-size:15px}
+nav button{margin:4px;padding:12px 16px;border-radius:12px;border:none;background:#1e293b;color:#fff}
 section{display:none;padding:14px}
 section.active{display:block}
 .card{background:#fff;padding:14px;border-radius:16px;margin-bottom:14px;box-shadow:0 6px 16px rgba(0,0,0,.08)}
@@ -30,7 +30,7 @@ th,td{padding:10px;border-bottom:1px solid #e5e7eb}
 th{background:#f8fafc}
 .adminOnly{display:none}
 
-/* CAMERA MODAL */
+/* Camera Modal */
 #camModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999}
 #camBox{background:#fff;margin:40px auto;padding:14px;width:95%;max-width:420px;border-radius:18px}
 #scanner{height:280px;border-radius:14px;overflow:hidden}
@@ -40,7 +40,7 @@ th{background:#f8fafc}
 <body>
 
 <header>
-<h2>🧾 POS Market</h2>
+<h2>🧾 Market POS</h2>
 <nav id="menu" style="display:none">
 <button onclick="openSec('stock')" class="adminOnly">📦 Stok</button>
 <button onclick="openSec('sale')">🛒 Shitje</button>
@@ -76,7 +76,7 @@ th{background:#f8fafc}
 
 <section id="sale">
 <div class="card">
-<input id="scan" placeholder="Barkod / Emër / USB Scan">
+<input id="scan" placeholder="Barkod / Emër / USB">
 <button class="primary" onclick="manualAdd()">➕ Shto</button>
 <button class="primary" onclick="openCam('sale','environment')">📷</button>
 <button class="primary" onclick="openCam('sale','user')">🤳</button>
@@ -94,7 +94,7 @@ th{background:#f8fafc}
 
 <section id="bil" class="adminOnly">
 <div class="card">
-<h3>Bilanci</h3>
+<h3>Bilanci Ditor</h3>
 <p>Sistem: <b><span id="daily">0</span></b></p>
 <input id="realCash" type="number" placeholder="Para reale">
 <p>Diferenca: <b><span id="diff">0</span></b></p>
@@ -111,9 +111,7 @@ th{background:#f8fafc}
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded",()=>{
-
-/* FIREBASE */
+/* 🔥 FIREBASE INIT */
 firebase.initializeApp({
  apiKey:"AIzaSyD_CfsHudMqShAeXzOg7z91xYE7k-13hbk",
  databaseURL:"https://market-pos-ab2e4-default-rtdb.europe-west1.firebasedatabase.app"
@@ -121,22 +119,25 @@ firebase.initializeApp({
 const db=firebase.database();
 
 /* USERS */
-const users=[{u:"admin",p:"admin",r:"admin"},{u:"kasier",p:"kasier",r:"kasier"}];
+const users=[
+ {u:"admin",p:"admin",r:"admin"},
+ {u:"kasier",p:"kasier",r:"kasier"}
+];
 let role=null;
 
 /* DATA */
 let products={},cart=[],scanTarget=null,scanLock=false;
 const today=new Date().toISOString().slice(0,10);
 
-/* LIVE */
-db.ref("products").on("value",s=>{
- products=s.val()||{};
+/* LIVE SYNC */
+db.ref("products").on("value",snap=>{
+ products=snap.val()||{};
  drawStock();
 });
 db.ref("daily/"+today).on("value",s=>daily.textContent=s.val()||0);
 
 /* LOGIN */
-window.doLogin=()=>{
+function doLogin(){
  let f=users.find(x=>x.u===u.value&&x.p===p.value);
  if(!f)return alert("Gabim login");
  role=f.r;
@@ -145,16 +146,17 @@ window.doLogin=()=>{
  document.querySelectorAll(".adminOnly")
   .forEach(e=>e.style.display=role==="admin"?"block":"none");
  openSec("sale");
-};
-window.logout=()=>location.reload();
-window.openSec=id=>{
+}
+function logout(){location.reload();}
+function openSec(id){
  document.querySelectorAll("section").forEach(s=>s.classList.remove("active"));
  document.getElementById(id).classList.add("active");
-};
+}
 
-/* STOK */
-window.addProduct=()=>{
- if(!pn.value||!pb.value||!pp.value||!ps.value)return alert("Plotëso të gjitha");
+/* 📦 STOK */
+function addProduct(){
+ if(!pn.value||!pb.value||!pp.value||!ps.value)
+   return alert("Plotëso të gjitha fushat");
  db.ref("products").push({
   n:pn.value.trim(),
   b:pb.value.trim(),
@@ -162,25 +164,28 @@ window.addProduct=()=>{
   s:+ps.value
  });
  pn.value=pb.value=pp.value=ps.value="";
-};
+}
 function drawStock(){
- if(!stockTbl)return;
  stockTbl.innerHTML="<tr><th>Emër</th><th>Barkod</th><th>Çmim</th><th>Sasi</th></tr>";
  Object.values(products).forEach(p=>{
-  stockTbl.innerHTML+=`<tr><td>${p.n}</td><td>${p.b}</td><td>${p.p}</td><td>${p.s}</td></tr>`;
+  stockTbl.innerHTML+=`<tr>
+   <td>${p.n}</td><td>${p.b}</td><td>${p.p}</td><td>${p.s}</td>
+  </tr>`;
  });
 }
 
-/* SHITJE */
-window.manualAdd=()=>{
+/* 🛒 SHITJE */
+function manualAdd(){
  let v=scan.value.trim().toLowerCase();
- let id=Object.keys(products).find(i=>products[i].b===v||products[i].n.toLowerCase()===v);
+ let id=Object.keys(products).find(i=>
+  products[i].b===v || products[i].n.toLowerCase()===v
+ );
  if(!id)return alert("Produkti nuk ekziston");
  if(products[id].s<1)return alert("Stok 0");
  let c=cart.find(x=>x.id===id);
  c?c.q++:cart.push({id,q:1});
- drawSale();scan.value="";
-};
+ drawSale(); scan.value="";
+}
 scan.onkeydown=e=>e.key==="Enter"&&manualAdd();
 
 function drawSale(){
@@ -189,7 +194,9 @@ function drawSale(){
  cart.forEach(x=>{
   let p=products[x.id];
   t+=x.q*p.p;
-  saleTbl.innerHTML+=`<tr><td>${p.n}</td><td>${x.q}</td><td>${x.q*p.p}</td></tr>`;
+  saleTbl.innerHTML+=`<tr>
+   <td>${p.n}</td><td>${x.q}</td><td>${x.q*p.p}</td>
+  </tr>`;
  });
  total.textContent=t;
  calc();
@@ -200,25 +207,29 @@ function calc(){
 }
 paid.oninput=calc;
 
-window.pay=()=>{
- if(+paid.value<+total.textContent)return alert("Nuk mjafton");
- cart.forEach(x=>db.ref("products/"+x.id+"/s").transaction(v=>v-x.q));
+function pay(){
+ if(+paid.value<+total.textContent)
+   return alert("Nuk mjafton shuma");
+ cart.forEach(x=>{
+  db.ref("products/"+x.id+"/s").transaction(v=>v-x.q);
+ });
  db.ref("daily/"+today).transaction(v=>(v||0)+ +total.textContent);
  clearSale();
-};
-window.clearSale=()=>{
- cart=[];saleTbl.innerHTML="";total.textContent=0;paid.value="";change.textContent=0;
-};
+}
+function clearSale(){
+ cart=[];saleTbl.innerHTML="";
+ total.textContent=0;paid.value="";change.textContent=0;
+}
 
-/* CAMERA */
-window.openCam=(target,mode)=>{
+/* 📷 CAMERA */
+function openCam(target,mode){
  scanTarget=target;scanLock=false;
  camModal.style.display="block";
  Quagga.init({
   inputStream:{type:"LiveStream",target:scanner,constraints:{facingMode:mode}},
   decoder:{readers:["ean_reader","code_128_reader"]}
  },err=>{
-  if(err)return alert("HTTPS & leje kamerën");
+  if(err)return alert("HTTPS & lejo kamerën");
   Quagga.start();
  });
  Quagga.onDetected(d=>{
@@ -232,20 +243,17 @@ window.openCam=(target,mode)=>{
   }
   setTimeout(stopCam,400);
  });
-};
-window.stopCam=()=>{
- Quagga.stop();camModal.style.display="none";
-};
+}
+function stopCam(){Quagga.stop();camModal.style.display="none";}
 
-/* BILANC */
-window.closeDay=()=>{
- let real=+realCash.value||0,sys=+daily.textContent;
+/* 📊 BILANC */
+function closeDay(){
+ let real=+realCash.value||0;
+ let sys=+daily.textContent;
  diff.textContent=real-sys;
  db.ref("backup/"+Date.now()).set({products,sys,real});
  alert("Bilanci u mbyll");
-};
-
-});
+}
 </script>
 
 </body>
